@@ -25,7 +25,8 @@ FILES IN THIS FOLDER
   - ca.crt ....................... a security certificate (install on phone, ONE time)
 
 
- 
+ <img width="720" height="1480" alt="phone_pkmn" src="https://github.com/user-attachments/assets/7b668386-8052-452e-95d4-6ad69152e15e" />
+
   ONE-TIME PHONE SETUP  (do this once)
  
 
