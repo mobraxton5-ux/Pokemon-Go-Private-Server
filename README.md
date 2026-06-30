@@ -1,7 +1,7 @@
 # Pokemon-Go-Private-Server
-============================================================
+
   POKEMON GO - HOME SERVER  (version 0.29, the original 2016 game)
-============================================================
+
 
 WHAT THIS IS
   A personal, offline Pokemon GO server. You log in with ANY name (no
