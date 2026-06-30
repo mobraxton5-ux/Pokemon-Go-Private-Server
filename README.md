@@ -24,9 +24,9 @@ FILES IN THIS FOLDER
   - ca.crt ....................... a security certificate (install on phone, ONE time)
 
 
-============================================================
+ 
   ONE-TIME PHONE SETUP  (do this once)
-============================================================
+ 
 
 1) Copy "pokemon-go-0.29.apk" and "ca.crt" onto the phone (USB, email, etc.).
 
@@ -47,9 +47,9 @@ FILES IN THIS FOLDER
    d) Settings -> Location -> set the mode to "GPS only" (NOT High accuracy).
 
 
-============================================================
+ 
   EACH TIME YOU PLAY
-============================================================
+ 
 
 ON THE PC:
   1) Double-click  Start-Pokemon-GO-Server.exe
@@ -68,9 +68,9 @@ ON THE PHONE:
 TO STOP: close the black server window on the PC.
 
 
-============================================================
+ 
   TROUBLESHOOTING
-============================================================
+ 
 
 - Stuck on the loading screen / "unable to authenticate":
     * The server window must be OPEN on the PC.
