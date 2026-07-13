@@ -20,12 +20,12 @@ WHAT YOU NEED
   - Both on the SAME Wi-Fi network
 
 FILES IN THIS FOLDER
-  - Start-Pokemon-GO-Server.exe ... the server (runs on this PC)
+  - Start-Pokemon-GO-Server.exe ... the server (runs on the PC)
   - pokemon-go-0.29.apk .......... the game (install on the phone)
   - ca.crt ....................... a security certificate (install on phone, ONE time)
 
 
- <img width="720" height="1480" alt="phone_pkmn" src="https://github.com/user-attachments/assets/7b668386-8052-452e-95d4-6ad69152e15e" />
+ <img width="250" height="500" alt="phone_pkmn" src="https://github.com/user-attachments/assets/7b668386-8052-452e-95d4-6ad69152e15e" />
 
   ONE-TIME PHONE SETUP  (do this once)
  
@@ -41,12 +41,8 @@ FILES IN THIS FOLDER
    -> choose ca.crt.  (Exact wording varies by phone; search Settings for
    "certificate" if needed. Accept the warning.)
 
-4) Set up location (so the map works indoors):
-   a) Install "Fake GPS Location" (by Lexa) from the Play Store.
-   b) Unlock Developer options: Settings -> About phone -> tap "Build
-      number" 7 times.
-   c) Settings -> Developer options -> "Select mock location app" -> Fake GPS.
-   d) Settings -> Location -> set the mode to "GPS only" (NOT High accuracy).
+4) Location setup
+A) open and go into the app settings and enable location. IDK why it doesnt ask for it but yeah.
 
 
  
@@ -59,12 +55,11 @@ ON THE PC:
             Point the phone's Wi-Fi DNS at:   192.168.1.50
      Note that number. KEEP THIS WINDOW OPEN while you play.
 
-ON THE PHONE:
-  3) Open "Fake GPS Location," drop the pin where you want to be, press PLAY.
-  4) Wi-Fi -> tap your network -> edit/advanced -> "IP settings" = Static
+ON THE PHONE:.
+  3) Wi-Fi -> tap your network -> edit/advanced -> "IP settings" = Static
      -> set "DNS 1" to the number from step 2 -> leave "DNS 2" blank -> Save.
-  5) Open Pokemon GO. Enter ANY username and ANY password -> you're in.
-  6) You'll land on the map with PokeStops and Gyms around you.
+  4) Open Pokemon GO. Enter ANY username and ANY password -> you're in.
+  5) You'll land on the map with PokeStops and Gyms around you.
      Tap a stop, swipe the photo disc to spin it, and grab the items!
 
 TO STOP: close the black server window on the PC.
@@ -80,7 +75,6 @@ TO STOP: close the black server window on the PC.
     * Phone and PC must be on the SAME Wi-Fi.
 
 - Map loads but NO PokeStops/Gyms:
-    * Make sure "Fake GPS Location" is running (you pressed PLAY).
     * Location mode must be "GPS only."
     * If the server window shows "(0.00000,0.00000)" your location isn't set
       - fix Fake GPS and reopen the game.
