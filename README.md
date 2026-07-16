@@ -1,7 +1,7 @@
 # Pokemon-Go-Private-Server
 APK NEEDED FOR INSTALATION! https://mega.nz/file/ut5EUDKT#L2_QV0XBHkqqepexOPDjmVRovBQnmNWwPUyVPkXSMBw
  
-  POKEMON GO - HOME SERVER  (version 0.29, the original 2016 game)
+  POKEMON GO - HOME SERVER  (version 0.29, the original 2016 game) (AI explained)
 
 
 WHAT THIS IS
