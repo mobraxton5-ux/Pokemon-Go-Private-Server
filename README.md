@@ -1,24 +1,15 @@
 # Pokemon-Go-Private-Server
-APK NEEDED FOR INSTALATION! https://mega.nz/file/ut5EUDKT#L2_QV0XBHkqqepexOPDjmVRovBQnmNWwPUyVPkXSMBw
-To add pokestops and spawns other than the base go to "http://127.0.0.1:8080" while your server is open.
-============================================================
-  POKEMON GO - PRIVATE HOME SERVER  (client version 0.29, July 2016) (Ai cuz I'm lazy)
-  Now WITH real wild Pokemon (the genuine 2016 3D models).
-============================================================
+
+Hello, and welcome to the tutorial to running my pokemon go server. PoGo ver 0.29
 
 WHAT'S IN THIS FOLDER
   - Start-Pokemon-GO-Server.exe .. the server (runs on THIS Windows PC)
   - _internal\ ................... the server's files (certs, game data, the 151
                                    Pokemon model bundles). Keep it next to the .exe.
   - pokemon-go-0.29.apk ......... the game (install on the phone)
-  - ca.crt / ca.pem ............. security certificate (install on phone, ONE time;
+  - ca.pem ............. security certificate (install on phone, ONE time;
                                    use whichever one your phone's installer will open)
-
-WHAT YOU NEED
-  - This Windows PC (runs the server)
-  - An Android phone (runs the game) -- iPhone will NOT work
-  - Both on the SAME Wi-Fi network
-  - (OPTIONAL) A GPS spoofer app for indoor play ("Fake GPS Location" by Lexa, free)
+To add pokestops and spawns other than the base go to "http://127.0.0.1:8080" while your server is open.
 
 
 ============================================================
@@ -36,18 +27,9 @@ WHAT YOU NEED
    -> Install a certificate -> CA certificate) -> pick ca.crt / ca.pem.
    Accept the warning. (You may need a screen-lock PIN set first.)
 
-4) Set up location (so the map works indoors):
-   a) Install "Fake GPS Location" by Lexa from the Play Store.
-   b) Turn on Developer options: Settings -> About phone -> tap "Build number"
-      7 times.
-   c) Settings -> Developer options -> "Select mock location app" -> Fake GPS.
-   d) Settings -> Location -> set mode to "GPS only" (NOT High accuracy), and
-      turn OFF "Google Location Accuracy". (This stops the real + fake GPS from
-      fighting each other.)
-
 
 ============================================================
-  EACH TIME YOU PLAY
+  EACH TIME YOU PLAY!
 ============================================================
 
 ON THE PC:
@@ -59,11 +41,10 @@ ON THE PC:
      Note that number. KEEP THIS WINDOW OPEN while you play.
 
 ON THE PHONE:
-  4) (OPTIONAL) Open "Fake GPS Location," drop the pin where you want to be, press PLAY.
-  5) Wi-Fi -> tap your network -> edit / advanced -> "IP settings" = Static
+  4) Wi-Fi -> tap your network -> edit / advanced -> "IP settings" = Static
      -> set "DNS 1" to the number from step 3 -> leave "DNS 2" blank -> Save.
-  6) Open Pokemon GO --> Trainer club --> Enter ANY username and ANY password -> you're in.
-  7) You'll land on the map with your trainer, PokeStops, Gyms, and wild
+  5) Open Pokemon GO --> Trainer club --> Enter ANY username and ANY password -> you're in.
+  6) You'll land on the map with your trainer, PokeStops, Gyms, and wild
      Pokemon around you. Tap a Pokemon to catch it; spin PokeStops for items.
 
 TO STOP: close the black server window on the PC.
@@ -85,8 +66,8 @@ that exact spot. Click any marker to remove it. Give things names --
   - "Random spawns: ON/OFF" toggles the automatically generated stops and
     wild Pokemon. Turn it OFF if you only want the things you placed.
   - The yellow dot is where your trainer currently is.
-  - Changes apply LIVE. Walk around in game and they appear on the next
-    map refresh (a few seconds) -- no restart needed.
+  - Changes apply after you restart (quickest). Walk around in game and they appear on the next
+    map refresh (a few seconds) 
   - Your placements are saved in places.json next to the .exe, so they
     survive restarts.
 
@@ -101,7 +82,7 @@ EVENTS
     - All 151 / From list / One species .. what can appear
     - CP range ........ how strong they are
   One-click presets: Normal, Swarm, Pikachu Festival, Starter Party,
-  Legendary Hunt, High CP. Pick one and it applies immediately.
+  Legendary Hunt, High CP. Pick one and it applies.
   (Example: "One species" + Pikachu = a Pikachu festival in your street.)
 
   Note: shiny Pokemon aren't available -- the 2016 game predates them.
