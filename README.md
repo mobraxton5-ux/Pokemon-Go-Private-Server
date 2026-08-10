@@ -11,12 +11,12 @@ WHAT'S IN THIS FOLDER
                                    use whichever one your phone's installer will open)
 To add pokestops and spawns other than the base go to "http://127.0.0.1:8080" while your server is open.
 
-
-============================================================
+LINKS: https://pgorelease.nianticlabs.com/shop (shop)
+https://pokemongo.zendesk.com/hc (put a stop at your house)
   ONE-TIME PHONE SETUP  (do this once)
-============================================================
 
-1) Copy pokemon-go-0.29.apk and ca.crt (or ca.pem) onto the phone.
+
+1) Copy pokemon-go-0.29.apk and ca.pem onto the phone.
 
 2) Install the game: tap pokemon-go-0.29.apk. Allow "install from unknown
    sources" if asked. If it says "App not installed," uninstall any other
@@ -28,9 +28,8 @@ To add pokestops and spawns other than the base go to "http://127.0.0.1:8080" wh
    Accept the warning. (You may need a screen-lock PIN set first.)
 
 
-============================================================
   EACH TIME YOU PLAY!
-============================================================
+
 
 ON THE PC:
   1) Double-click  Start-Pokemon-GO-Server.exe
@@ -50,9 +49,9 @@ ON THE PHONE:
 TO STOP: close the black server window on the PC.
 
 
-============================================================
+
   WORLD MANAGER  (place your own PokeStops, Gyms and Pokemon)
-============================================================
+
 
 While the server is running, open this on the PC's browser:
 
