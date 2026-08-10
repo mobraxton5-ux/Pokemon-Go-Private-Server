@@ -1,11 +1,11 @@
 @@ -11,12 +11,12 @@ WHAT'S IN THIS FOLDER
                                    use whichever one your phone's installer will open)
 To add pokestops and spawns other than the base go to "http://127.0.0.1:8080" while your server is open.
-
-
-============================================================
 LINKS: https://pgorelease.nianticlabs.com/shop (shop)
 https://pokemongo.zendesk.com/hc (put a stop at your house)
+
+============================================================
+
   ONE-TIME PHONE SETUP  (do this once)
 ============================================================
 
