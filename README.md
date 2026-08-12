@@ -9,6 +9,7 @@ after you do that, open the game, login,(remember your password) and get in!
 other stuff: open settings and go to the help center, where you have some options for you.
 Other IP: http://127.0.0.1:8080 (server management on the pc)
 CRL-C to stop and close
+
 <img width="200" height="400" alt="Screenshot_20260812-161933_Pokmon GO" src="https://github.com/user-attachments/assets/07690997-ca5a-46e3-a896-16e98405e6a5" />
 <img width="200" height="400" alt="Screenshot_20260812-161144_Pokmon GO" src="https://github.com/user-attachments/assets/72330913-95e2-43dc-986d-cd0fe1eeaece" />
 <img width="200" height="400" alt="Screenshot_20260812-161216_Pokmon GO" src="https://github.com/user-attachments/assets/80d44bd9-c862-40e2-868b-1e3d96fa5801" />
