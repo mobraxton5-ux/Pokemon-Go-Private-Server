@@ -36,10 +36,11 @@ LOG = os.path.join(REPO, "..", "server", "data", "stops_log.txt")
 
 
 def geocode(city):
-    url = "https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode(
-        {"q": city, "format": "json", "limit": 1})
-    req = urllib.request.Request(url, headers={"User-Agent": "pogo-private-server/1.0"})
-    d = json.load(urllib.request.urlopen(req, timeout=30))
+    import requests
+    r = requests.get("https://nominatim.openstreetmap.org/search",
+                      params={"q": city, "format": "json", "limit": 1},
+                      headers={"User-Agent": "pogo-private-server/1.0"}, timeout=30)
+    d = r.json()
     if not d:
         raise SystemExit(f'could not find "{city}" -- try adding a state/country')
     return float(d[0]["lat"]), float(d[0]["lon"]), d[0]["display_name"]
@@ -141,7 +142,7 @@ def grab(clat, clng, radius_km, gym_every=10, progress=None):
         if progress:
             progress(f"ring {ring}/{rings}: {len(forts)} businesses so far")
     for f in forts:                     # exact 1-in-K gyms, ignoring landmark forcing
-        h = int(hashlib.md5(f["id"].encode()).hexdigest(), 16)
+        h = int(hashlib.sha256(f["id"].encode()).hexdigest(), 16)
         f["kind"] = "gym" if h % osm.GYM_EVERY == 0 else "stop"
     return forts
 
