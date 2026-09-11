@@ -249,16 +249,29 @@ def avatar_look():
 
 
 def build_player_avatar() -> bytes:
-    """The avatar exactly as it was before the customisation experiment.
+    """The trainer's look.
 
-    Field 8 is PlayerAvatarType and 0 is UNSET, which leaves the client drawing
-    the avatar it stored locally -- and that is what worked. Sending a real type
-    (1 = MALE by the client's own enum) turned the trainer into a girl, and
-    letting the client's dress-up screen pick produced a shadow with no body, so
-    both routes are worse than not touching it. The plumbing underneath
-    (SET_AVATAR, per-player storage, avatar_look) is still here and still
-    records what the client sends; nothing reads it back into this message.
+    Once a trainer has saved a look (SET_AVATAR), it is sent back EXACTLY as the
+    client sent it -- every slot, field 8 included, with slots the client left
+    out (proto3 drops zeros) sent as 0. Sending a fixed look here is what made
+    customisation "not work": the client applied the new outfit, then the next
+    GET_PLAYER put the old one back. Field 8 is the trap: 0.29 calls it
+    PlayerAvatarType (1 = MALE) but 0.35 treats 0 = male, 1 = female -- which is
+    why substituting our own value once turned a trainer into a girl. Echoing
+    the client's own value is right for whichever client sent it.
+
+    Trainers who never customised keep the original known-good look (type 0).
     """
+    try:
+        import world
+        saved = world.avatar()
+    except Exception:
+        saved = {}
+    if saved:
+        w = pb.Writer()
+        for name, fld in AV_SLOTS:
+            w.uint(fld, max(0, int(saved.get(name, 0) or 0)))
+        return w.to_bytes()
     return (pb.Writer()
             .uint(2, 1)   # skin
             .uint(3, 1)   # hair
@@ -305,6 +318,14 @@ def _storage():
         return 250, 350
 
 
+def _created_ms() -> int:
+    try:
+        import world
+        return world.created_ms()
+    except Exception:
+        return int(time.time() * 1000)
+
+
 def build_player_data(username: str) -> bytes:
     # The in-game name is the codename the trainer claimed in onboarding, if any;
     # otherwise the login name. (Existing accounts have no codename -> unchanged.)
@@ -315,7 +336,7 @@ def build_player_data(username: str) -> bytes:
     except Exception:
         pass
     w = (pb.Writer()
-         .uint(PD_CREATION_MS, int(time.time() * 1000) - 86_400_000)
+         .uint(PD_CREATION_MS, _created_ms())         # fixed start date
          .string(PD_USERNAME, name)
          .uint(PD_TEAM, _player_team())              # 0 until chosen -> team screen
          .packed_varints(PD_TUTORIAL, tutorial_state())
@@ -1391,22 +1412,21 @@ def parse_set_avatar(msg):
     choices by the slot field numbers in AV_SLOTS."""
     inner = pb.get(pb.decode(msg), 2, pb.WT_LEN)
     look = {}
-    if inner:
-        pa = pb.decode(inner)
+    if inner is not None:
+        pa = pb.decode(inner) if inner else []
+        # The client sends its WHOLE avatar, but proto3 leaves out zero values --
+        # so a missing slot means 0 and is stored as 0, not skipped (skipping
+        # left the previous value in place, e.g. an old hat you'd taken off).
         for name, fld in AV_SLOTS:
-            v = pb.get(pa, fld, pb.WT_VARINT)
-            if v is not None:
-                look[name] = v
+            look[name] = pb.get(pa, fld, pb.WT_VARINT) or 0
     return look
 
 
 def build_set_avatar_response(look, username) -> bytes:
     """SetAvatarResponse { status=1, player_data=2 } (status 1=SUCCESS).
 
-    The client keeps its OWN copy of the look it just built and draws from that;
-    we only record it and acknowledge. build_player_data still sends the known-good
-    avatar (type UNSET), which is what avoided the shadow-trainer problem before --
-    we are NOT trying to drive the avatar from the server here."""
+    The look is saved first, so the player_data in this reply (and every later
+    GET_PLAYER) carries the new outfit back, exactly as sent."""
     try:
         import world
         if look:
@@ -2399,12 +2419,10 @@ def build_player_profile_response(now_ms=None) -> bytes:
     which is why the Medals page was blank however much you played."""
     import world
     w = pb.Writer().uint(1, 1)
-    # "Trainer since": the day this account's save first appeared on disk.
-    try:
-        start = int(os.path.getctime(world.current().file) * 1000)
-    except OSError:
-        start = int((now_ms or time.time() * 1000) - 86_400_000)
-    w.int_(2, start)
+    # "Start date": stored in the save when the trainer was created. (It used to
+    # be the save file's ctime -- but every save is written fresh and swapped in,
+    # so that was really "last saved", i.e. it showed the last login.)
+    w.int_(2, _created_ms())
     for bt, rank, lo, hi, cur in badge_progress():
         w.message(3, build_player_badge(bt, rank, lo, hi, cur))
     return w.to_bytes()
@@ -3327,13 +3345,15 @@ def build_fort_search_response(fort_id, now_ms) -> bytes:
             trimmed.append((iid, take)); left -= take
         awards = trimmed
     w = pb.Writer().uint(1, 1)                                  # result = SUCCESS
+    eggs_got = 0
     if rnd.random() < _cfg.get("eggs", "drop_chance", cast=float):
         # 2 km eggs are common, 10 km rare -- same shape as the real drop table.
         tier = rnd.choices(EGG_TIERS, weights=(60, 30, 10))[0]
         # No item award for the egg: item 901 is an INCUBATOR, not an egg, and
         # reporting it made the spin look like it handed out an incubator. The egg
         # itself arrives with the next inventory delta.
-        world.give_egg(tier)
+        if world.give_egg(tier):
+            eggs_got = 1
     world.bump("poke_stop_visits")
     world.add_xp(_cfg.get("pokestops", "xp_per_spin", cast=int))
     for iid, cnt in awards:
@@ -3341,6 +3361,9 @@ def build_fort_search_response(fort_id, now_ms) -> bytes:
         # actually PUT them in the bag -- otherwise the spin animation shows a
         # Poke Ball but GET_INVENTORY never reports it and it's nowhere to be found
         world.add_item(iid, cnt)
+    world.log_action({"kind": "fort", "fort_id": fort_id, "t": now_ms,
+                      "items": [[int(i), int(c)] for i, c in awards],
+                      "eggs": eggs_got})
     _cool = _cfg.get("pokestops", "cooldown_minutes", cast=float)
     return (w.int_(5, _cfg.get("pokestops", "xp_per_spin", cast=int))   # experience_awarded
              .int_(6, now_ms + int(_cool * 60_000))            # cooldown (goes purple)
@@ -4421,3 +4444,39 @@ def parse_player_update(msg):
     f = pb.decode(msg)
     return (_f64_to_double(pb.get(f, 1, pb.WT_64)),
             _f64_to_double(pb.get(f, 2, pb.WT_64)))
+
+
+# ------------------------------------------------------------------ the Journal
+def build_action_log_response() -> bytes:
+    """The in-game Journal (request #801, SFIDA_ACTION_LOG in POGOProtos). Field
+    numbers read from the 0.29 client's own metadata:
+      GetActionLogResponse { result=1, log=2 repeated ActionLogEntry }
+      ActionLogEntry { timestamp_ms=1, sfida=2 bool, catch_pokemon=3, fort_search=4 }
+      CatchPokemonLogEntry { result=1 (1=CAPTURED 2=FLED), pokedex_number=2,
+                             combat_points=3, pokemon_id=4 fixed64 }
+      FortSearchLogEntry { result=1 (1=SUCCESS), fort_id=2, items=3 repeated
+                           ItemProto{item=1, count=2}, eggs=4 }
+    The screen used to stay empty because the server never sent entries -- the
+    client keeps no log of its own. Newest first."""
+    import world
+    w = pb.Writer().uint(1, 1)                                  # SUCCESS
+    for e in reversed(world.action_log()):
+        entry = pb.Writer().int_(1, int(e.get("t", 0)))
+        if e.get("kind") == "catch":
+            c = (pb.Writer().uint(1, int(e.get("result", 1)))
+                 .uint(2, int(e.get("pokemon_id", 0)))
+                 .int_(3, int(e.get("cp", 0))))
+            if e.get("uid"):
+                c.fixed64(4, int(e["uid"]))
+            entry.message(3, c.to_bytes())
+        elif e.get("kind") == "fort":
+            f = pb.Writer().uint(1, 1).string(2, str(e.get("fort_id", "")))
+            for iid, cnt in e.get("items") or []:
+                f.message(3, pb.Writer().uint(1, int(iid)).int_(2, int(cnt)).to_bytes())
+            if e.get("eggs"):
+                f.int_(4, int(e["eggs"]))
+            entry.message(4, f.to_bytes())
+        else:
+            continue
+        w.message(2, entry.to_bytes())
+    return w.to_bytes()

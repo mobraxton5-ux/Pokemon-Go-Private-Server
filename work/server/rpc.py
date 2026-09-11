@@ -384,10 +384,20 @@ def _build_returns(reqs, username, log):
             # Read BEFORE building the response -- the response consumes it.
             import world as _w
             berry = _w.berry_mult(eid)
+            _sp = _w.get_spawn(eid)
             returns.append(P.build_catch_pokemon_response(
                 eid, ball, hit, int(time.time() * 1000), reticle, spin, hitpos))
             b = P.throw_bonus(reticle, spin, hitpos)
-            st = pb.get(pb.decode(returns[-1]), 1, pb.WT_VARINT)
+            _cr = pb.decode(returns[-1])
+            st = pb.get(_cr, 1, pb.WT_VARINT)
+            # The Journal lists catches and Pokemon that ran away (not break-outs
+            # or misses, which the encounter simply continues after).
+            if _sp and st in (1, 3):
+                _w.log_action({"kind": "catch", "result": 1 if st == 1 else 2,
+                               "pokemon_id": int(_sp["pokemon_id"]),
+                               "cp": int(_sp.get("cp", 0)),
+                               "uid": int(pb.get(_cr, 3, pb.WT_64)
+                                          or pb.get(_cr, 3, pb.WT_VARINT) or 0)})
             log(f"      -> CATCH_POKEMON {eid} ball={ball} hit={hit} "
                 f"reticle={reticle:.2f} hitpos={hitpos:.3f} spin={spin:.2f}"
                 + (f" berry=x{berry:.1f}" if berry and berry > 1.0 else "")
@@ -420,6 +430,10 @@ def _build_returns(reqs, username, log):
         elif rtype == P.RT.EQUIP_BADGE:
             returns.append(P.build_equip_badge_response(msg))
             log("      -> EQUIP_BADGE -> SUCCESS")
+        elif rtype == P.RT.SFIDA_ACTION_LOG:
+            returns.append(P.build_action_log_response())
+            import world as _wj
+            log(f"      -> JOURNAL: {len(_wj.action_log())} entries")
         elif rtype == P.RT.ECHO:
             returns.append(P.build_echo_response())
             log("      -> ECHO")

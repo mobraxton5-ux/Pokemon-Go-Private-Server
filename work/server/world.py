@@ -174,6 +174,11 @@ class Player:
                             "uses": -1, "egg": 0, "start_km": 0.0,
                             "target_km": 0.0}]
         self.HATCHED = []        # hatched, not yet reported to the client
+        # The in-game Journal: newest last, {"t": ms, "kind": "catch"|"fort", ...}.
+        self.ACTION_LOG = []
+        # "Start date" on the profile and PlayerData.creation_timestamp_ms. Set once
+        # when the trainer is created and saved, so it never moves again.
+        self.CREATED_MS = int(time.time() * 1000)
         self.LAST_POS = None     # (lat, lng) for the walked-distance tally
         self.TEAM = 0            # 0 = not chosen yet; set in game at level 5
         # Onboarding: which TutorialCompletion steps this trainer has finished.
@@ -237,7 +242,8 @@ class Player:
                 "free_stop_used": self.FREE_STOP_USED,
                 "last_defender_bonus": self.LAST_DEFENDER_BONUS,
                 "eggs": self.EGGS, "incubators": self.INCUBATORS,
-                "hatched": self.HATCHED,
+                "hatched": self.HATCHED, "action_log": self.ACTION_LOG,
+                "created_ms": self.CREATED_MS,
                 "caught_by_type": {str(k): v for k, v in self.CAUGHT_BY_TYPE.items()},
                 "badges": {str(k): v for k, v in self.BADGES.items()},
                 "avatar": self.AVATAR, "avatar_ask": self.AVATAR_ASK,
@@ -324,6 +330,22 @@ class Player:
         if loose > 0:
             _new_incubators(self, 902, loose)
         self.HATCHED = [h for h in (d.get("hatched") or []) if isinstance(h, dict)]
+        self.ACTION_LOG = [a for a in (d.get("action_log") or [])
+                           if isinstance(a, dict)][-ACTION_LOG_MAX:]
+        # Saves from before created_ms existed: the oldest thing we can date is
+        # the earliest caught Pokemon / Journal entry -- a far better "trainer
+        # since" than now. It's written back on the next save and then stays put.
+        try:
+            created = int(d.get("created_ms") or 0)
+        except (TypeError, ValueError):
+            created = 0
+        if created <= 0:
+            stamps = [int(c.get("caught_ms") or 0) for c in (d.get("caught") or [])
+                      if isinstance(c, dict)]
+            stamps += [int(a.get("t") or 0) for a in self.ACTION_LOG]
+            stamps = [s for s in stamps if s > 1_400_000_000_000]   # sane ms only
+            created = min(stamps) if stamps else self.CREATED_MS
+        self.CREATED_MS = created
         self.STARDUST = int(d.get("stardust", self.STARDUST) or self.STARDUST)
         self.XP = int(d.get("xp", 0) or 0)
         self.COINS = int(d.get("coins", 0) or 0)
@@ -600,6 +622,31 @@ def is_despawned(encounter_id):
 
 
 # --- bag ---------------------------------------------------------------------
+def created_ms():
+    """When the current trainer started (ms) -- stored in the save, never moves."""
+    return int(current().CREATED_MS)
+
+
+ACTION_LOG_MAX = 100            # Journal entries kept per trainer
+
+
+def log_action(entry):
+    """Add one Journal entry ({"kind": "catch"|"fort", ...}) for the current
+    trainer, stamped now; the oldest fall off past ACTION_LOG_MAX."""
+    p = current()
+    e = dict(entry)
+    e.setdefault("t", int(time.time() * 1000))
+    with _lock:
+        p.ACTION_LOG.append(e)
+        del p.ACTION_LOG[:-ACTION_LOG_MAX]
+    p.save()
+
+
+def action_log():
+    with _lock:
+        return [dict(a) for a in current().ACTION_LOG]
+
+
 INCUBATOR_ITEMS = (901, 902)    # ITEM_INCUBATOR_BASIC_UNLIMITED, ITEM_INCUBATOR_BASIC
 BASIC_INCUBATOR_USES = 3        # a 2016 basic incubator hatches three eggs
 
