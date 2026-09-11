@@ -489,8 +489,13 @@ def build_get_inventory_response(since_ms=0) -> bytes:
     # stays on screen. Real 2016 servers sent zero-count items the same way.
     for iid, cnt in world.bag_items(include_empty=True):
         items.append(_inventory_item(2, build_bag_item(iid, cnt), now))
-    for iid in world.INCUBATOR_ITEMS:            # incubators never live in the bag
-        items.append(_inventory_item(2, build_bag_item(iid, 0), now))
+    # Incubators live in world.INCUBATORS (the egg_incubators list is what eggs
+    # go into), but the BAG screen reads ordinary item entries -- real 2016
+    # inventories carried both. So mirror each type's count here as well.
+    _owned = world.incubators()
+    for iid in world.INCUBATOR_ITEMS:
+        n = sum(1 for _i in _owned if int(_i.get("item", 901)) == iid)
+        items.append(_inventory_item(2, build_bag_item(iid, n), now))
     for c in world.caught():
         items.append(_inventory_item(1, build_pokemon_data(          # pokemon_data
             c["pokemon_id"], c["uid"], c["cp"], extra=c), now))

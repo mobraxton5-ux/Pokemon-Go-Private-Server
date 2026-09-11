@@ -95,43 +95,63 @@ def _storage_kind(sku):
     return "items" if sku.startswith("itemstorage") else "pokemon"
 
 
+def _currency(name, amount):
+    import pb
+    w = pb.Writer().string(1, name)
+    if amount:
+        w.uint(2, int(amount))
+    return w.to_bytes()
+
+
+# The native store plugin's item content is GameItemContentProto { type=1 STRING,
+# quantity=2 } -- "GameItemContentProto.type" is one of the string-field names
+# left in libNianticLabsPlugin.so, and IapService.StringToItemType turns it back
+# into an Item. We used to send the numeric ItemId there; a varint in a string
+# field reads as "", which parses to ITEM_UNKNOWN, so every "you got..." popup
+# said item_unknown_name. The names are the client's own Item enum members.
+_ITEM_TYPE_NAME = {1: "ITEM_POKE_BALL", 301: "ITEM_LUCKY_EGG",
+                   401: "ITEM_INCENSE_ORDINARY", 501: "ITEM_TROY_DISK",
+                   901: "ITEM_INCUBATOR_BASIC_UNLIMITED", 902: "ITEM_INCUBATOR_BASIC",
+                   1001: "ITEM_POKEMON_STORAGE_UPGRADE",
+                   1002: "ITEM_ITEM_STORAGE_UPGRADE"}
+
+
+def _store_item_bytes(sku, iid, cnt, price, sort):
+    """One StoreItem of the Shop list."""
+    import pb
+
+    def _item_data(item_id, count):
+        name = _ITEM_TYPE_NAME.get(int(item_id), "ITEM_UNKNOWN")
+        return pb.Writer().string(1, name).uint(2, int(count)).to_bytes()
+
+    def _tag(key, value):
+        return pb.Writer().string(1, key).string(2, value).to_bytes()
+
+    item_id = _STORAGE_ITEM.get(sku, iid)
+    # A storage upgrade is "1 upgrade item"; the +50 comes from the item
+    # template's additional_storage. Sending the 50 here (as if it were a
+    # stack of 50 upgrade items) breaks the client's tile formatting so its
+    # "+{0}" placeholder never fills. Mirror the authentic store data: count 1.
+    is_upgrade = sku in _STORAGE_ITEM
+    count = 1 if is_upgrade else cnt
+    category = "UPGRADES" if is_upgrade else "ITEMS"
+    w = pb.Writer().string(1, "pgorelease." + sku)   # item_id (display sku)
+    w.message(3, _currency("POKECOIN", price))       # currency_to_buy
+    w.message(5, _item_data(item_id, count))         # yields_item
+    w.message(6, _tag("CATEGORY", category))         # tags (repeated)
+    w.message(6, _tag("SORT", str(sort)))
+    return w.to_bytes()
+
+
 def build_platform_shop(coins, stardust):
     """Bytes of the Unknown6Response(response_type=5) that fills the in-game Shop
     screen, priced in PokeCoins, ending with the player's live currencies."""
     import pb
 
-    def _currency(name, amount):
-        w = pb.Writer().string(1, name)
-        if amount:
-            w.uint(2, int(amount))
-        return w.to_bytes()
-
-    def _item_data(item_id, count):
-        return pb.Writer().uint(1, int(item_id)).uint(2, int(count)).to_bytes()
-
-    def _tag(key, value):
-        return pb.Writer().string(1, key).string(2, value).to_bytes()
-
-    def _store_item(sku, iid, cnt, price, sort):
-        item_id = _STORAGE_ITEM.get(sku, iid)
-        # A storage upgrade is "1 upgrade item"; the +50 comes from the item
-        # template's additional_storage. Sending the 50 here (as if it were a
-        # stack of 50 upgrade items) breaks the client's tile formatting so its
-        # "+{0}" placeholder never fills. Mirror the authentic store data: count 1.
-        is_upgrade = sku in _STORAGE_ITEM
-        count = 1 if is_upgrade else cnt
-        category = "UPGRADES" if is_upgrade else "ITEMS"
-        w = pb.Writer().string(1, "pgorelease." + sku)   # item_id (display sku)
-        w.message(3, _currency("POKECOIN", price))       # currency_to_buy
-        w.message(5, _item_data(item_id, count))         # yields_item
-        w.message(6, _tag("CATEGORY", category))         # tags (repeated)
-        w.message(6, _tag("SORT", str(sort)))
-        return w.to_bytes()
-
     inner = pb.Writer().uint(1, 1)                        # unknown1 = 1 (success)
     for sort, entry in enumerate(CATALOGUE, 1):
         sku, _label, iid, cnt, price, _icon, _was = entry
-        inner.message(2, _store_item(sku, iid, cnt, price, sort))
+        inner.message(2, _store_item_bytes(sku, iid, cnt, price, sort))
     inner.message(3, _currency("POKECOIN", coins))        # player_currencies
     inner.message(3, _currency("STARDUST", stardust))
 
@@ -167,9 +187,10 @@ def purchase(item_id):
 
 def build_buy_response(ok=True):
     """Platform response to a shop purchase (request_type 2). Best-effort ack:
-    Unknown6Response{response_type=2, unknown2{unknown1=1(=ok)}} -- mirrors the
-    shop list's success marker. The buy response isn't documented anywhere, so
-    this is provisional; adjust if the phone shows an error after buying."""
+    Unknown6Response{response_type=2, unknown2{unknown1=1(=ok)}}. Five richer
+    layouts were tried on a phone (2026-09-10) and none changed anything -- the
+    "you got..." popup takes its item from the Shop LIST (see _ITEM_TYPE_NAME),
+    not from this reply."""
     import pb
     inner = pb.Writer().uint(1, 1 if ok else 0)
     return pb.Writer().uint(1, 2).message(2, inner).to_bytes()
