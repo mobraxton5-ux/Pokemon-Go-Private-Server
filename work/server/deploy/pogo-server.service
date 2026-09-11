@@ -1,0 +1,22 @@
+[Unit]
+Description=bracky's PoGO 0.29 private server (game 443/tcp + DNS redirect 53/udp)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# RUN_IP is filled in by setup-vm.sh with the VM's public IP.
+Environment=RUN_IP=REPLACE_WITH_PUBLIC_IP
+WorkingDirectory=/opt/pogo
+ExecStart=/usr/bin/python3 /opt/pogo/run.py
+Restart=always
+RestartSec=3
+# Ports 53 and 443 are privileged; run as root (simplest) — this is a
+# single-purpose box. AmbientCapabilities would let it drop root, but keep
+# it simple for a personal server.
+User=root
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,115 @@
+# ============================================================================
+#  WHITELIST — only the server and tools source (plus README) ever go to GitHub.
+#  RELEASE/, saves, APKs/IPAs, build output, logs etc. are all outside this.
+#  The rules further down still filter what's INSIDE work/server and work/tools.
+# ============================================================================
+/*
+!/.gitignore
+!/README.md
+!/work/
+/work/*
+!/work/server/
+!/work/tools/
+
+# ============================================================================
+#  DO NOT COMMIT — Niantic copyrighted material (APK, decompiled assets, data)
+#  Distributing these is a copyright/ToS violation and will likely get DMCA'd.
+#  Anyone using this repo supplies their own legally-obtained 0.29 APK.
+# ============================================================================
+*.apk
+*.idsig
+work/extracted/
+**/game_master.bin
+work/tools/gm_2016.txt
+work/tools/global-metadata.patched.dat
+**/global-metadata*.dat
+
+# ----------------------------------------------------------------------------
+#  SECURITY — never commit private keys / certs (regenerate with gen_certs.py)
+# ----------------------------------------------------------------------------
+work/server/certs/
+*.key
+*.keystore
+*.srl
+*.csr
+
+# ----------------------------------------------------------------------------
+#  Third-party tools & generated protobufs (download/build these yourself)
+# ----------------------------------------------------------------------------
+work/tools/POGOProtos-*/
+work/tools/*.jar
+work/tools/*.zip
+work/tools/*.tar.gz
+work/tools/*.bat
+work/tools/*.exe
+work/tools/*.msi
+work/tools/appium-settings.apk
+work/tools/frida-server*
+work/tools/gadget-config.json
+
+# ----------------------------------------------------------------------------
+#  Build artifacts / caches
+# ----------------------------------------------------------------------------
+__pycache__/
+*.pyc
+work/server/dist/
+work/server/build/
+work/server/*.spec
+
+# ----------------------------------------------------------------------------
+#  Personal screenshots (they show your real location / username)
+# ----------------------------------------------------------------------------
+*.png
+work/*.png
+
+# Local tooling config (not part of the project)
+.claude/
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# ============================================================================
+#  PUBLISH = SOURCE ONLY. Everything below is a built copy, a snapshot, runtime
+#  state, personal data, or Niantic material -- none of it belongs in the repo.
+# ============================================================================
+#  Packaged builds / distribution snapshots (each a full copy of the tree)
+/RELEASE/
+/SOURCE/
+/server/
+/drive/
+work/PoGO-Server-Ready/
+work/server/dist/
+work/server/build/
+
+#  Out-of-scope subprojects (their own source lives outside this repo)
+work/goserver/
+work/il2cpp/
+work/mods/
+work/site/
+work/server/site/
+
+#  Extracted app/engine data (Niantic copyright, and thousands of files)
+work/unity/
+work/v035/
+work/extracted/
+work/tools/_bundle_cache/
+**/bin/Data/
+Start-POI-Exporter.bat
+
+#  Niantic app builds (copyright) + the untrusted third-party server folder
+*.ipa
+APK&IPA/
+PoGO server but better!/
+
+#  Runtime state, player saves (real usernames = personal data), logs, big data
+work/server/data/
+work/server/assets/
+work/server/assets_ios/
+work/server/assets_plain/
+work/server/photos/
+*.bin
+*.bak
+*.bak-*
+*.log
+sideloadlydaemon.log
