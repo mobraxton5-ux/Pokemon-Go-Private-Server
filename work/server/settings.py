@@ -111,6 +111,9 @@ DEFAULTS = {
         # Cells further than this from you get no wild Pokemon (0 = no limit).
         # Cuts the map payload hard, which is what a VPN on cellular needs.
         "radius_m": 300,
+        # The Sightings / nearby panel lists wild Pokemon within this distance of
+        # you, each at its real distance (the 2016 tracker covered ~200m).
+        "sightings_radius_m": 200,
         "min_cp": 100,
         "max_cp": 1200,
         "allow_legendaries": False,

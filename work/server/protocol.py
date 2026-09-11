@@ -3849,6 +3849,23 @@ def build_get_map_objects_response(cell_ids, lat, lng) -> bytes:
             _budget[_cid3] = _share
             _left -= _share
 
+    # Sightings (the nearby panel): every wild Pokemon within sightings_radius_m
+    # of the TRAINER, at its REAL distance, with its encounter id. It used to get
+    # a made-up constant (120m, 20m, ...) or the distance from its PokeStop, and
+    # every Pokemon in every requested cell was listed however far away it was.
+    try:
+        _sight_r = float(_cfg.get("spawns", "sightings_radius_m", cast=float))
+    except Exception:
+        _sight_r = 200.0
+    _coslat = max(0.2, _math.cos(_math.radians(lat)))
+
+    def _sight(lst, pid, plat, plng, eid):
+        if not have_fix:
+            return
+        d = _math.hypot((plat - lat) * 111320.0, (plng - lng) * 111320.0 * _coslat)
+        if d <= _sight_r:
+            lst.append(build_nearby_pokemon(pid, d, eid))
+
     w = pb.Writer()
     spawned = forts_n = wild_n = 0
     for cid in cells:
@@ -3887,7 +3904,7 @@ def build_get_map_objects_response(cell_ids, lat, lng) -> bytes:
                     catch.append(build_map_pokemon(sid, eid, pid, dl, dn, expire))
                     _world.remember_spawn(eid, pid, dl, dn, cp, sid, expire)
                     spawns.append(build_spawn_point(dl, dn))
-                    nearby.append(build_nearby_pokemon(pid, dist))
+                    _sight(nearby, pid, dl, dn, eid)
                     wild_n += 1
         if ctr and _proc_spawns and wild_n < MAX_WILD:
             # Wild Pokemon in EVERY level-17 child of this cell (16 of them), rather
@@ -3925,7 +3942,7 @@ def build_get_map_objects_response(cell_ids, lat, lng) -> bytes:
                 catch.append(build_map_pokemon(sid, eid, pid, jl, jn, expire))
                 _world.remember_spawn(eid, pid, jl, jn, _cp, sid, expire)
                 spawns.append(build_spawn_point(jl, jn))
-                nearby.append(build_nearby_pokemon(pid, 120.0))
+                _sight(nearby, pid, jl, jn, eid)
                 wild_n += 1
         if cid == player_cell and _proc_spawns:
             # a cluster of wild Pokemon right around the trainer (spread within ~65m)
@@ -3956,7 +3973,7 @@ def build_get_map_objects_response(cell_ids, lat, lng) -> bytes:
                 catch.append(build_map_pokemon(sid2, eid2, pid2, dlat, dlng, expire))
                 _world.remember_spawn(eid2, pid2, dlat, dlng, _cp2, sid2, expire)
                 spawns.append(build_spawn_point(dlat, dlng))
-                nearby.append(build_nearby_pokemon(pid2, 10.0 + k * 5))
+                _sight(nearby, pid2, dlat, dlng, eid2)
         if _proc_forts and forts_n < MAX_FORTS:
             forts = l17_forts(cid, now)[:max(0, MAX_FORTS - forts_n)]
             forts_n += len(forts)
@@ -4003,7 +4020,7 @@ def build_get_map_objects_response(cell_ids, lat, lng) -> bytes:
             catch.append(build_map_pokemon(_sid, _eid, _pid, _s["lat"], _s["lng"], expire))
             _world.remember_spawn(_eid, _pid, _s["lat"], _s["lng"], _pcp, _sid, expire)
             spawns.append(build_spawn_point(_s["lat"], _s["lng"]))
-            nearby.append(build_nearby_pokemon(_pid, 20.0))
+            _sight(nearby, _pid, _s["lat"], _s["lng"], _eid)
 
         # Incense: more wild Pokemon around the trainer while it burns.
         if cid == player_cell and _proc_spawns and _world.item_active(401):
@@ -4026,7 +4043,7 @@ def build_get_map_objects_response(cell_ids, lat, lng) -> bytes:
                 catch.append(build_map_pokemon(sid, eid, pid, dl, dn, expire))
                 _world.remember_spawn(eid, pid, dl, dn, cp, sid, expire)
                 spawns.append(build_spawn_point(dl, dn))
-                nearby.append(build_nearby_pokemon(pid, 15.0))
+                _sight(nearby, pid, dl, dn, eid)
 
         # Lures: extra Pokemon clustered on any lured stop in this cell.
         if _proc_spawns:
@@ -4054,7 +4071,7 @@ def build_get_map_objects_response(cell_ids, lat, lng) -> bytes:
                     catch.append(build_map_pokemon(sid, eid, pid, dl, dn, expire))
                     _world.remember_spawn(eid, pid, dl, dn, cp, sid, expire)
                     spawns.append(build_spawn_point(dl, dn))
-                    nearby.append(build_nearby_pokemon(pid, 12.0))
+                    _sight(nearby, pid, dl, dn, eid)
 
         # A defeated raid boss waiting at the trainer's feet (their cell only).
         if cid == player_cell:
@@ -4071,7 +4088,7 @@ def build_get_map_objects_response(cell_ids, lat, lng) -> bytes:
                 _world.remember_spawn(_b["eid"], _b["pid"], _b["lat"], _b["lng"],
                                       _b["cp"], _bsid, _b["expires_ms"])
                 spawns.append(build_spawn_point(_b["lat"], _b["lng"]))
-                nearby.append(build_nearby_pokemon(_b["pid"], 5.0))
+                _sight(nearby, _b["pid"], _b["lat"], _b["lng"], _b["eid"])
 
         spawned += len(wild)
         w.message(1, build_map_cell(cid, now, catch, forts, wild,
