@@ -80,7 +80,7 @@ PC; nothing connects to outside servers.
 
 ## Platforms
 
-- **iPhone (0.29):** works with the stock client — no patching — reached over Tailscale.
+- **iPhone (0.29 and 0.35):** works with the stock client — no patching — reached over Tailscale.
 - **Android (0.29):** needs a one-time static metadata patch to the APK (see
   [Reverse engineering](#reverse-engineering-the-client)); no root, user-installed CA.
 - **Android (0.35):** also supported, through a plain-HTTP SSO bridge plus RPC over a real
