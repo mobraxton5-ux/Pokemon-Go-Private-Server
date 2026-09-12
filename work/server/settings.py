@@ -256,16 +256,17 @@ DEFAULTS = {
     },
     "server": {
         "world_manager_port": 8080,
-        # Which client the server tells the game is the minimum. "0.29.0" lets both
-        # the 0.29 and 0.35 clients in; "0.35.0" makes the 0.29 client show
-        # "update required" so only 0.35 connects. Toggle it in the World Manager.
-        "min_client_version": "0.29.0",
         # EXPERIMENT: serve our branded HTML page at the real PTC login URL
         # (/sso/login). If the client's PTC button opens a WEBVIEW, this replaces
         # the login screen with our own (logo, text, email+password, no Google).
         # If the client's login is NATIVE, this BREAKS login -> flip it back to
         # false. Default false = the proven JSON login. Test on a throwaway account.
         "custom_login_page": False,
+        # How the server shows itself when you start the exe:
+        #   "windstock" = the Project Windstock window (status, activity, buttons)
+        #   "console"   = the old plain black console window, raw text only
+        # Takes effect the NEXT time the server is started.
+        "window": "windstock",
     },
 }
 
@@ -382,6 +383,8 @@ _README = [
     "",
     "server:",
     "   world_manager_port ... the http://127.0.0.1:PORT control panel",
+    "   window ............... 'windstock' = the server window, 'console' = the",
+    "                          old black console window (applies on next start)",
     "====================================================================",
 ]
 
@@ -434,10 +437,18 @@ def all():
                 m = None
         if _cache["data"] is None or m != _cache["mtime"]:
             try:
-                with open(SETTINGS_FILE, "r", encoding="utf-8") as fh:
+                # utf-8-SIG: Notepad, PowerShell's Set-Content and friends write a
+                # BOM. Plain utf-8 chokes on it, and every setting in the file was
+                # then silently ignored in favour of the defaults.
+                with open(SETTINGS_FILE, "r", encoding="utf-8-sig") as fh:
                     user = json.load(fh)
-            except (OSError, ValueError):
+            except OSError:
                 user = {}
+            except ValueError as e:
+                user = {}
+                print(f"!! settings.json could not be read ({e}) -- using DEFAULTS "
+                      f"for everything. Fix the file, or delete it to start over: "
+                      f"{SETTINGS_FILE}")
             _cache["data"] = _merged(user)
             # A settings.json written by an older build is missing whatever has
             # been added since, and nothing ever put it there -- so new settings
@@ -477,7 +488,7 @@ def set(section, key, value):
     by mtime, so the change applies within a few seconds -- no restart."""
     all()                                   # ensure the file exists first
     try:
-        with open(SETTINGS_FILE, "r", encoding="utf-8") as fh:
+        with open(SETTINGS_FILE, "r", encoding="utf-8-sig") as fh:
             doc = json.load(fh)
     except (OSError, ValueError):
         doc = {}

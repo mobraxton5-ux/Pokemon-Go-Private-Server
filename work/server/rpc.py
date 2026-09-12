@@ -53,6 +53,16 @@ def _envelope_latlng(fields):
             struct.unpack("<d", struct.pack("<Q", lo))[0])
 
 
+def _mon(uid):
+    """'#25 CP312' for one of the current trainer's Pokemon (for the log)."""
+    try:
+        import world
+        c = world.get_caught(uid)
+        return f"#{c['pokemon_id']} CP{c['cp']}" if c else ""
+    except Exception:
+        return ""
+
+
 def _build_returns(reqs, username, log):
     # Everything below reads/writes THIS account's state (saves/<name>.json).
     # Must happen before any world.* call in the request.
@@ -306,10 +316,11 @@ def _build_returns(reqs, username, log):
                   4: "it's defending a gym"}.get(res, f"result {res}")))
         elif rtype == P.RT.RELEASE_POKEMON:
             uid = P.parse_pokemon_id(msg)
+            was = _mon(uid)                  # read first: it's gone afterwards
             r = P.build_release_response(uid)
             returns.append(r)
             res = pb.get(pb.decode(r), 1, pb.WT_VARINT)
-            log(f"      -> RELEASE_POKEMON {uid} -> " +
+            log(f"      -> RELEASE_POKEMON {uid} {was} -> " +
                 {1: "transferred (+1 candy)", 2: "REFUSED: it's at a gym",
                  3: "FAILED"}.get(res, str(res)))
         elif rtype == P.RT.UPGRADE_POKEMON:
@@ -317,15 +328,16 @@ def _build_returns(reqs, username, log):
             r = P.build_upgrade_response(uid)
             returns.append(r)
             res = pb.get(pb.decode(r), 1, pb.WT_VARINT)
-            log(f"      -> UPGRADE_POKEMON {uid} -> " +
+            log(f"      -> UPGRADE_POKEMON {uid} {_mon(uid)} -> " +
                 {1: "powered up", 2: "not found", 3: "not enough candy/stardust",
                  5: "it's at a gym"}.get(res, str(res)))
         elif rtype == P.RT.EVOLVE_POKEMON:
             uid = P.parse_pokemon_id(msg)
+            was = _mon(uid)
             r = P.build_evolve_response(uid)
             returns.append(r)
             d = pb.decode(r); res = pb.get(d, 1, pb.WT_VARINT)
-            log(f"      -> EVOLVE_POKEMON {uid} -> " +
+            log(f"      -> EVOLVE_POKEMON {uid} {was} -> " +
                 {1: f"evolved! +{pb.get(d,3,pb.WT_VARINT)} xp", 2: "missing",
                  3: "not enough candy", 4: "cannot evolve",
                  5: "it's at a gym"}.get(res, str(res)))
@@ -334,13 +346,14 @@ def _build_returns(reqs, username, log):
             uid = pb.get(f, 1, pb.WT_64) or 0
             nick = pb.get(f, 2, pb.WT_LEN) or b""
             returns.append(P.build_nickname_response(uid, nick.decode("utf-8", "replace")))
-            log(f"      -> NICKNAME_POKEMON {uid} = {nick.decode('utf-8','replace')!r}")
+            log(f"      -> NICKNAME_POKEMON {uid} {_mon(uid)} = "
+                f"{nick.decode('utf-8','replace')!r}")
         elif rtype == P.RT.SET_FAVORITE_POKEMON:
             f = pb.decode(msg)
             uid = pb.get(f, 1, pb.WT_64) or pb.get(f, 1, pb.WT_VARINT) or 0
             fav = bool(pb.get(f, 2, pb.WT_VARINT))
             returns.append(P.build_favorite_response(uid, fav))
-            log(f"      -> SET_FAVORITE_POKEMON {uid} fav={fav}")
+            log(f"      -> SET_FAVORITE_POKEMON {uid} {_mon(uid)} fav={fav}")
         elif rtype == P.RT.RECYCLE_INVENTORY_ITEM:
             iid, cnt = P.parse_recycle(msg)
             returns.append(P.build_recycle_response(iid, cnt))
@@ -369,8 +382,19 @@ def _build_returns(reqs, username, log):
                 + ("AWARDED_ALREADY (no popup)" if already else "SUCCESS, items granted"))
         elif rtype == P.RT.FORT_SEARCH:
             fid, _, _ = P.parse_fort_request(msg)
-            returns.append(P.build_fort_search_response(fid, int(time.time() * 1000)))
-            log(f"      -> FORT_SEARCH {fid!r} (items added to bag + 50xp, 5m cooldown)")
+            r = P.build_fort_search_response(fid, int(time.time() * 1000))
+            returns.append(r)
+            d = pb.decode(r)
+            got = []
+            for a in pb.get_all(d, 2):                 # ItemAward{item_id, count}
+                if isinstance(a, bytes):
+                    ad = pb.decode(a)
+                    got.append(f"item{pb.get(ad, 1, pb.WT_VARINT)}"
+                               f"x{pb.get(ad, 2, pb.WT_VARINT) or 1}")
+            res = pb.get(d, 1, pb.WT_VARINT)
+            log(f"      -> FORT_SEARCH {fid!r} "
+                + (f"got [{' '.join(got)}] +{pb.get(d, 5, pb.WT_VARINT) or 0}xp"
+                   if res == 1 else "BAG FULL" if res == 4 else f"result {res}"))
         elif rtype == P.RT.ENCOUNTER:
             eid = P.parse_encounter(msg)
             returns.append(P.build_encounter_response(eid, int(time.time() * 1000)))
@@ -476,7 +500,7 @@ def handle(method, path, query, headers, body, log):
         name = os.path.basename(path[len("/fortimg/"):])
         if name == P.DEFAULT_FORT_IMAGE:            # built-in placeholder photo
             data = P.default_fort_png()
-            return 200, {"Content-Type": "image/png"}, data
+            return 200, {"Content-Type": P.image_content_type(data)}, data
         fp = os.path.join(P.PHOTO_DIR, name)
         if name and os.path.isfile(fp):
             data = open(fp, "rb").read()

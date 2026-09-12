@@ -314,7 +314,7 @@ def humanize(line):
         return f"\U0001F534 {who} caught a Pokemon"
     if "broke out" in line:
         return f"\u26aa {who}'s Pokemon broke out"
-    if "FORT_SEARCH" in line and "items added" in line:
+    if "-> FORT_SEARCH" in line and "got [" in line:
         return f"\U0001F535 {who} spun a PokeStop"
     if "LEVEL_UP_REWARDS" in line and "SUCCESS" in line:
         return f"\u2B50 {who} leveled up"

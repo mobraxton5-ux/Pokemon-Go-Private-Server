@@ -100,10 +100,11 @@ def detect_ip():
     return route or "127.0.0.1"
 
 
-def _setup_logging():
+def _setup_logging(ui_stream=None):
     """Tee ALL console output to server-log.txt next to the exe/script, so the
     full RPC / asset / map trace can be sent for debugging (the game client strips
-    its own logs, so this server log is our only window into what happened)."""
+    its own logs, so this server log is our only window into what happened).
+    `ui_stream` (the server window's activity pane) gets a copy too."""
     import datadir
     log_dir = datadir.ensure()
     # APPEND, don't truncate. Opening "w" wiped the log on every restart, so
@@ -119,13 +120,14 @@ def _setup_logging():
     try:
         logf = open(log_path, "a", encoding="utf-8", buffering=1)  # line-buffered
     except OSError:
-        return
+        logf = None
     try:
         import datetime as _dt
         stamp = _dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        logf.write("\n" + "=" * 60 + "\n")
-        logf.write(f"  bracky's PoGO private server  --  session started {stamp}\n")
-        logf.write("=" * 60 + "\n")
+        if logf:
+            logf.write("\n" + "=" * 60 + "\n")
+            logf.write(f"  bracky's PoGO private server  --  session started {stamp}\n")
+            logf.write("=" * 60 + "\n")
     except Exception:
         pass
 
@@ -150,12 +152,15 @@ def _setup_logging():
                     except Exception:
                         pass
 
-    sys.stdout = _Tee(sys.__stdout__, logf)
-    sys.stderr = _Tee(sys.__stderr__, logf)
+    # sys.__stdout__ is None in the windowed exe; _Tee skips missing streams.
+    sys.stdout = _Tee(sys.__stdout__, logf, ui_stream)
+    sys.stderr = _Tee(sys.__stderr__, logf, ui_stream)
 
 
-def main():
-    _setup_logging()
+def main(ui_stream=None):
+    """Run everything. Blocks in server.main(). The server window
+    (server_gui.py) calls this on a background thread with its own stream."""
+    _setup_logging(ui_stream)
     redirect_ip = (sys.argv[1] if len(sys.argv) > 1
                    else os.environ.get("RUN_IP") or detect_ip())
     # Show the alternatives. When the phone can't reach the server, the first

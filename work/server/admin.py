@@ -18,7 +18,7 @@ import events as EV
 import places as PL
 import webui
 
-# Items you can hand yourself from the Shop panel (id -> label). These are the
+# Items the "Give to a player" panel can hand out (id -> label). These are the
 # ones the 2016 client actually knows how to display in the bag.
 # NOTE: 301 is the Lucky Egg and 501 is the Lure Module (Troy Disk). This list
 # previously had 501 labelled "Lucky Egg" and 602 labelled "Lure Module" -- 602 is
@@ -28,28 +28,6 @@ GIVEABLE = [(1, "Poke Ball"), (2, "Great Ball"), (3, "Ultra Ball"),
             (104, "Max Potion"), (201, "Revive"), (202, "Max Revive"),
             (701, "Razz Berry"), (401, "Incense"), (301, "Lucky Egg"),
             (501, "Lure Module"), (902, "Egg Incubator")]
-
-# The shop, at the real 2016 PokeCoin prices. (sku, label, item_id, count, price)
-# The in-game shop screen cannot work -- it prices everything through Google Play
-# and our APK isn't a registered Play product -- so this is where you spend the
-# coins your Gym defenders earn.
-SHOP = [
-    ("pokeball.20",   "20 x Poke Ball",     1,  20,  100),
-    ("pokeball.100",  "100 x Poke Ball",    1, 100,  460),
-    ("pokeball.200",  "200 x Poke Ball",    1, 200,  800),
-    ("greatball.20",  "20 x Great Ball",    2,  20,  200),
-    ("ultraball.10",  "10 x Ultra Ball",    3,  10,  300),
-    ("potion.20",     "20 x Potion",      101,  20,  200),
-    ("revive.10",     "10 x Revive",      201,  10,  200),
-    ("razz.20",       "20 x Razz Berry",  701,  20,  150),
-    ("incense.1",     "1 x Incense",      401,   1,   80),
-    ("incense.8",     "8 x Incense",      401,   8,  500),
-    ("luckyegg.1",    "1 x Lucky Egg",    301,   1,   80),
-    ("luckyegg.8",    "8 x Lucky Egg",    301,   8,  500),
-    ("lure.1",        "1 x Lure Module",  501,   1,  100),
-    ("lure.8",        "8 x Lure Module",  501,   8,  680),
-    ("incubator.1",   "1 x Egg Incubator", 902,  1,  150),
-]
 
 # Kanto species names for the picker (index 0 unused)
 DEX = [""] + """Bulbasaur Ivysaur Venusaur Charmander Charmeleon Charizard Squirtle Wartortle
@@ -137,26 +115,6 @@ Changes apply live &mdash; walk around in game and they'll appear.</div>
   <button onclick="ring()">Build ring</button>
 </div>
 
-<h2>Client Version</h2>
-<div class="bar">
-  <span class="inline-label">Client the server accepts:</span>
-  <button id="cv-29" onclick="setVer('0.29')">0.29</button>
-  <button id="cv-35" onclick="setVer('0.35')">0.35</button>
-  <span class="hint" style="align-self:center">0.29 = both 0.29 and 0.35 work &middot;
-    0.35 = require 0.35 (0.29 gets "update required")</span>
-</div>
-<h2>Shop</h2>
-<div class="bar">
-  <span class="inline-label">PokeCoins: <b id="coins" class="coins">0</b></span>
-  <button onclick="buy('pokemon')" id="b-buypk">Pokemon storage</button>
-  <button onclick="buy('items')" id="b-buyit">Item bag</button>
-</div>
-<div class="hint" id="shophint">Earn PokeCoins by leaving Pokemon to defend a Gym.
-Upgrades apply in game straight away.</div>
-<div class="bar" id="shopitems"></div>
-<div class="hint" id="buyhint">The in-game shop screen prices everything through
-Google Play, which a re-signed APK can't reach &mdash; so buy here instead. Items land
-in your bag within a few seconds.</div>
 <h2>Raid</h2>
 <div class="bar">
   <button onclick="raidToggle()" id="b-raid">Raid: off</button>
@@ -262,23 +220,6 @@ async function saveEv(){
   load();
 }
 async function preset(n){await post('/api/preset',{name:n});load();}
-function paintShop(coins){
-  const box=$('shopitems'); box.innerHTML='';
-  (SHOP).forEach(([sku,label,iid,cnt,price])=>{
-    const b=document.createElement('button');
-    b.textContent = label + '  —  ' + price + 'c';
-    b.disabled = coins < price;
-    b.style.opacity = coins < price ? 0.45 : 1;
-    b.onclick = ()=>buyItem(sku);
-    box.appendChild(b);
-  });
-}
-async function buyItem(sku){
-  const r = await post('/api/buyitem', {sku: sku, player: $('giveuser').value});
-  $('buyhint').textContent = (r.ok?'✓ ':'✗ ') + r.message;
-  $('buyhint').style.color = r.ok ? '#7fd1a6' : '#ff9a9a';
-  load();
-}
 function raidPaint(r){
   $('b-raid').textContent = 'Raid: ' + (r.on ? 'ON' : 'off');
   $('b-raid').style.background = r.on ? '#8a2b2b' : '';
@@ -344,13 +285,6 @@ async function giveDust(){
     kind:'stardust', count:+$('givedust').value}));
 }
 
-async function buy(kind){
-  const r=await post('/api/buy',{what:kind});
-  $('shophint').textContent = (r.ok?'\u2713 ':'\u2717 ') + r.message;
-  $('shophint').style.color = r.ok ? '#7fd1a6' : '#ff9a9a';
-  load();
-}
-
 async function load(){
   const j=await (await fetch('/api/world')).json();
   data=j.places; player=j.player; $('cnt').textContent=data.forts.length+data.spawns.length;
@@ -358,19 +292,9 @@ async function load(){
   const nstop=data.forts.length-ngym;
   $('warn').style.display=(ngym===0&&!data.procedural_forts)?'block':'none';
   $('counts').textContent=nstop+' PokeStops / '+ngym+' Gyms / '+data.spawns.length+' spawn points';
-  const st=j.storage||{};
-  $('coins').textContent=st.coins||0;
-  paintShop(st.coins||0);
-  $('b-buypk').textContent='Pokemon storage: '+(st.pokemon_used||0)+'/'+(st.max_pokemon||0)
-    +'  (+'+(j.prices?j.prices.pokemon_step:0)+' for '+(j.prices?j.prices.pokemon_cost:0)+')';
-  $('b-buyit').textContent='Item bag: '+(st.items_used||0)+'/'+(st.max_items||0)
-    +'  (+'+(j.prices?j.prices.items_step:0)+' for '+(j.prices?j.prices.items_cost:0)+')';
   $('mode').textContent=j.config.event_name+' / density '+j.config.spawn_density;
   $('b-pf').textContent='Random stops/gyms: '+(data.procedural_forts?'ON':'OFF');
   $('b-ps').textContent='Random Pokemon: '+(data.procedural_spawns?'ON':'OFF');
-  const cv=(data.min_client_version||'0.29.0');
-  $('cv-29').className=cv.indexOf('0.35')===0?'':'on';
-  $('cv-35').className=cv.indexOf('0.35')===0?'on':'';
   $('b-pf').className=data.procedural_forts?'on':'';
   $('b-ps').className=data.procedural_spawns?'on':'';
   const c=j.config;
@@ -419,12 +343,10 @@ async function place(lat,lng){
 }
 async function del(id){await post('/api/remove',{id});load();}
 async function clearAll(){if(confirm('Remove every placed object?')){await post('/api/clear',{});load();}}
-async function setVer(v){ await post('/api/clientver',{version:v}); load(); }
 async function togProc(what){
   const cur = what==='forts' ? data.procedural_forts : data.procedural_spawns;
   await post('/api/procedural',{on:!cur, what}); load();
 }
-const SHOP = __SHOP__;
 (__GIVEABLE__).forEach(([id,label])=>{const o=document.createElement('option');
   o.value=id;o.textContent=label;$('giveitem').appendChild(o);});
 DEX.forEach((n,i)=>{if(i){const o=document.createElement('option');o.value=i;
@@ -468,8 +390,8 @@ class _Handler(BaseHTTPRequestHandler):
             return self._send(200, "text/html; charset=utf-8",
                               webui.render(PAGE)
                                   .replace("__DEX__", json.dumps(DEX))
-                                  .replace("__GIVEABLE__", json.dumps(GIVEABLE))
-                                  .replace("__SHOP__", json.dumps(SHOP)))
+                                  .replace("__GIVEABLE__", json.dumps(GIVEABLE)))
+
         if p == "/downloads":
             import downloads_ui
             return self._send(200, "text/html; charset=utf-8", downloads_ui.world())
@@ -494,8 +416,7 @@ class _Handler(BaseHTTPRequestHandler):
                                    "pokemon_cost": CFG.get("storage", "pokemon_upgrade_cost"),
                                    "items_step": CFG.get("storage", "items_upgrade_step"),
                                    "items_cost": CFG.get("storage", "items_upgrade_cost")},
-                               "player": {"lat": lat, "lng": lng},
-                               "min_client_version": CFG.get("server", "min_client_version")})
+                               "player": {"lat": lat, "lng": lng}})
         self._send(404, "text/plain", "not found")
 
     def do_POST(self):
@@ -605,38 +526,6 @@ class _Handler(BaseHTTPRequestHandler):
                                        "message": f"{who}'s password has been reset"})
                 return self._json({"ok": False,
                                    "message": f"no account called {who!r}"})
-            if p == "/api/buyitem":
-                import world, contextlib as _ctx
-                who = (d.get("player") or "").strip()
-                entry = next((e for e in SHOP if e[0] == d.get("sku")), None)
-                if not entry:
-                    return self._json({"ok": False, "message": "unknown item"})
-                _sku, label, iid, cnt, price = entry
-                # acting_as is a context manager: a bad username raises on
-                # __enter__, i.e. at the `with`, not where it's constructed.
-                try:
-                    ctx = world.acting_as(who) if who else _ctx.nullcontext()
-                    ctx.__enter__()
-                except KeyError:
-                    return self._json({"ok": False,
-                                       "message": f"no account called {who!r}"})
-                try:
-                    target = who or world.current().username
-                    if world.room_in_bag() < cnt:
-                        return self._json({"ok": False,
-                                           "message": f"{target}'s bag has no room "
-                                                      f"for {cnt} more items"})
-                    if not world.spend_coins(price):
-                        return self._json({"ok": False,
-                                           "message": f"need {price} PokeCoins, "
-                                                      f"{target} has {world.COINS}"})
-                    total = world.add_item(iid, cnt)
-                    return self._json({"ok": True,
-                                       "message": f"bought {label} for {price}c "
-                                                  f"-- {target} now has {total}",
-                                       "coins": world.COINS})
-                finally:
-                    ctx.__exit__(None, None, None)
             if p == "/api/makestop":
                 # "Spawn a PokeStop in my area" -- first one free, then it costs
                 # coins. Drops a real, spinnable stop at the trainer's location
@@ -704,18 +593,8 @@ class _Handler(BaseHTTPRequestHandler):
             if p == "/api/accounts":
                 import world
                 return self._json({"accounts": world.account_names()})
-            if p == "/api/buy":
-                import world
-                ok, message, new = world.buy_storage(
-                    "pokemon" if d.get("what") == "pokemon" else "items")
-                return self._json({"ok": ok, "message": message, "new": new})
             if p == "/api/procedural":
                 return self._json(PL.set_procedural(d.get("on", True), d.get("what", "both")))
-            if p == "/api/clientver":
-                import settings as CFG
-                v = "0.35.0" if str(d.get("version", "")).startswith("0.35") else "0.29.0"
-                CFG.set("server", "min_client_version", v)
-                return self._json({"min_client_version": v})
             if p == "/api/save":
                 return self._json(EV.save(d))
             if p == "/api/preset":
